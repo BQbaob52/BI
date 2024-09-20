@@ -1,0 +1,9 @@
+let
+    Source = Excel.Workbook(File.Contents("C:\Users\qbbui\Downloads\GSJV\Role cost rates.xlsx"), null, true),
+    #"Role cost rates_Sheet" = Source{[Item="Role cost rates",Kind="Sheet"]}[Data],
+    #"Promoted Headers" = Table.PromoteHeaders(#"Role cost rates_Sheet", [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Role", type text}, {"rateType", type text}, {"Cost in hour", type number}}),
+    PivotedTable = Table.Pivot( #"Changed Type", List.Distinct(#"Changed Type"[rateType]), "rateType", "Cost in hour"),
+    #"Removed Columns" = Table.RemoveColumns(PivotedTable,{"OT1"})
+in
+    #"Removed Columns"

@@ -1,0 +1,38 @@
+let
+    Source = Folder.Files("C:\Users\qbbui\Downloads\GSJV\01. Timesheets"),
+    #"Filtered Hidden Files1" = Table.SelectRows(Source, each [Attributes]?[Hidden]? <> true),
+    #"Invoke Custom Function1" = Table.AddColumn(#"Filtered Hidden Files1", "Transform File", each #"Transform File"([Content])),
+    #"Renamed Columns1" = Table.RenameColumns(#"Invoke Custom Function1", {"Name", "Source.Name"}),
+    #"Removed Other Columns1" = Table.SelectColumns(#"Renamed Columns1", {"Source.Name", "Transform File"}),
+    #"Expanded Table Column1" = Table.ExpandTableColumn(#"Removed Other Columns1", "Transform File", Table.ColumnNames(#"Transform File"(#"Sample File"))),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table Column1",{{"Source.Name", type text}, {"Travel", type text}, {"Week Ending", type date}, {"Name", type text}, {"Company", type text}, {"Employee Number", type text}, {"Check Vlookup Area", type text}, {"Date", type date}, {"Day", type text}, {"Day / Night", type text}, {"Weekend", type text}, {"Bank Holidays", type any}, {"Vlookup Standard hours", type number}, {"Hours", type number}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type",{{"Day / Night", "Day_or_night"}}),
+    #"Lowercased Text" = Table.TransformColumns(#"Renamed Columns",{{"Day_or_night", Text.Lower, type text}}),
+    #"Uppercased Text" = Table.TransformColumns(#"Lowercased Text",{{"Check Vlookup Area", Text.Upper, type text}}),
+    #"RateType"= Table.AddColumn( #"Uppercased Text", "RateType", each
+        // Sun night -> Fri day : T1
+        if [Day_or_night] = "night" and [Day] = "Sun" then "T1"
+        else if [Day_or_night] = "day" and [Day] = "Mon" then "T1"
+		else if [Day_or_night] = "day" and [Day] = "Tue" then "T1"
+		else if [Day_or_night] = "day" and [Day] = "Wed" then "T1"
+		else if [Day_or_night] = "day" and [Day] = "Thurs" then "T1"
+        else if [Day_or_night] = "night" and [Day] = "Tue" then "T1"
+        else if [Day_or_night] = "night" and [Day] = "Mon" then "T1"
+        else if [Day_or_night] = "night" and [Day] = "Wed" then "T1"
+        else if [Day_or_night] = "night" and [Day] = "Thurs" then "T1"
+        else if [Day_or_night] = "day" and [Day] = "Fri" then "T1"
+        // Fri night -> Sat day : T2
+        else if [Day_or_night] = "night" and [Day] = "Fri" then "T2"
+        else if [Day_or_night] = "day" and [Day] = "Sat" then "T2"
+        // Sat night -> Sun day : T3
+        else if [Day_or_night] = "night" and [Day] = "Sat" then "T3"
+        else if [Day_or_night] = "day" and [Day] = "Sun" then "T3"
+        else null
+    ),
+    #"Changed Type1" = Table.TransformColumnTypes(RateType,{{"Date", type date}}),
+    #"Renamed Columns2" = Table.RenameColumns(#"Changed Type1",{{"Vlookup Standard hours", "Contract hours"}}),
+    #"Filtered Rows" = Table.SelectRows(#"Renamed Columns2", each ([Company] = "Socotec")),
+    #"Renamed Columns3" = Table.RenameColumns(#"Filtered Rows",{{"Check Vlookup Area", "Area"}}),
+    #"Filtered Rows1" = Table.SelectRows(#"Renamed Columns3", each ([Source.Name] <> "02. Feb 24 GSJV Timesheet Report Actualised - DK.xlsx"))
+in
+    #"Filtered Rows1"
